@@ -47,18 +47,13 @@ def test_duplicate_order_is_rejected():
 
 
 def test_country_is_normalised():
-    orders = make_orders(
-        [
-            {"order_id": 1, "country": " france"},
-            {"order_id": 2, "country": "FRANCE "},
-        ]
-    )
+    orders = make_orders([{"order_id": 1, "country": " france"}, {"order_id": 2, "country": "FRANCE "}])
     clean, rejected = clean_orders(orders)
     assert list(clean["country"]) == ["France", "France"]
     assert len(rejected) == 0
 
 
 def test_check_schema_stops_on_missing_column():
-    orders = make_orders([{"order_id": 1}]).rename(columns={"unit_price": "price"})
+    orders = make_orders([{}]).rename(columns={"unit_price": "price"})
     with pytest.raises(DataQualityError):
         check_schema(orders)

@@ -26,5 +26,5 @@ def check_reject_rate(n_total, n_rejected, max_rate=MAX_REJECT_RATE):
     if rate > max_rate:
         raise DataQualityError(
             f"Reject rate {rate:.0%} is above the limit of {max_rate:.0%} "
-            f"({n_rejected} of {n_total} rows rejected)"
+            f"({n_rejected} of {n_total} rows)"
         )

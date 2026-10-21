@@ -25,10 +25,10 @@ def clean_orders(df):
     # Rule 3 - validity: quantity must be positive
     _flag(df, ~(df["quantity"] > 0), "invalid_quantity")
 
-    # Rule 4 - validity: price present, positive, and at most MAX_UNIT_PRICE
+    # Rule 4 - validity: price present, positive and plausible
     _flag(df, ~df["unit_price"].between(0.01, MAX_UNIT_PRICE), "invalid_unit_price")
 
-    # Rule 5 - uniqueness: one row per order_id, keep the first
+    # Rule 5 - uniqueness: one row per order_id (we keep the first one)
     _flag(df, df.duplicated("order_id", keep="first"), "duplicate_order_id")
 
     rejected = df[df["reject_reason"].notna()]
