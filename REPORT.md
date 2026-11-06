@@ -1,4 +1,4 @@
-# Comptes rendus des TP1, TP2 et TP3
+# Comptes rendus des TP1, TP2, TP3 et TP4
 
 **Nom :** Mariem Tanabene
 
@@ -137,4 +137,31 @@
 ### Dernière ligne de `dbt build` (jour 1)
 
 Done. PASS=14 WARN=0 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=14
+
+## TP4
+
+### Les deux liens à rendre
+
+- Exécution verte du workflow CI sur `main` : https://github.com/mariemtnb/dataops-lab1/actions/runs/42203506312
+- Exécution manuelle du workflow Nightly sur `main` : https://github.com/mariemtnb/dataops-lab1/actions/runs/42203662179
+
+### Ce que j'ai vu
+
+**Étape 0.** La CI du TP1 était rouge avec `FileNotFoundError: data/raw/orders_day1.csv`. Depuis le TP2 les CSV sont sous DVC, et le remote DVC est un dossier sur mon PC, donc GitHub ne peut pas les récupérer. Personne n'avait touché au code, ce sont les données qui avaient changé de place.
+
+**Étape 1.** `ruff check .` et `python -m pytest` passent (6 tests). Avec `import os` en trop, ruff affiche `F401`. Ma version de ruff est plus récente que celle de la fiche et vérifie aussi l'ordre des imports, donc j'ai dû ajouter une ligne vide dans trois anciens fichiers. DuckDB est passé en 1.5.6, j'ai reconstruit l'entrepôt et `dbt build` donne `PASS=14`.
+
+**Étape 2.** Le contrat est valide sur l'échantillon et sur le jour 2 (13 contrôles). Le jour 3 est refusé avec `Required column 'unit_price' is missing` et le code de sortie 1. Le jour 2 passe parce que le contrat regarde la forme du fichier, pas les montants.
+
+**Étape 3.** Pandera charge le jour 1 (35 lignes, code 0). Il refuse le jour 2 (`more than 20 % of the prices are implausible`) et le jour 3 (`price` en trop, `unit_price` manquante), avec le code 1. Après ces deux refus, `raw.orders` contient toujours le jour 1.
+
+**Étape 4.** `report_md.py 8835.40` affiche les 5 pays et sort avec 0. `report_md.py 9999` affiche `REGRESSION` et sort avec 1.
+
+**Étape 5.** Sur la pull request #1, les trois jobs sont passés au vert dans l'ordre lint, python-tests, data-quality. Le résumé affiche le tableau avec `Total: 8835.40`, et l'artefact `dbt-results` contient `run_results.json`. Après la fusion, la CI sur `main` est verte.
+
+**Étape 6.** Pull request #2 fusionnée, puis lancement à la main de Nightly avec le bouton Run workflow. L'exécution est verte et l'artefact `dbt-docs` contient la documentation.
+
+**Étape 7.** Pull request #3 (`unit_price` renommée en `price`) : lint et python-tests verts, data-quality rouge à l'étape du contrat avec `Required column 'unit_price' is missing`. GitHub affiche « Some checks were not successful ». Je l'ai fermée sans fusionner.
+
+**Étape 8.** Pull request #4 (quantités jusqu'à -5) : lint vert, python-tests rouge avec `test_negative_quantity_is_rejected`, et data-quality ne s'est pas lancé. Je l'ai fermée sans fusionner.
 
