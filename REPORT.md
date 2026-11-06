@@ -1,10 +1,8 @@
-# Comptes rendus – TP1, TP2 et TP3
+# Comptes rendus des TP1, TP2 et TP3
 
 **Nom :** Mariem Tanabene
 
----
-
-# TP1
+## TP1
 
 **Q1.** Le fichier `requirements.txt` garde la liste des bibliothèques et de leurs versions. Avec une seule commande, n'importe qui peut refaire le même environnement sur son PC.
 
@@ -49,31 +47,29 @@
 
 **Q14.** Un planificateur (cron, Airflow), un outil de CI comme GitHub Actions, ou un outil de monitoring. Ils lisent le code de sortie pour savoir si le job a réussi et envoyer une alerte si besoin.
 
----
+## TP2
 
-# TP2
+**Q1.** Non. Tant que je travaillais sur la branche, `main` n'avait pas la règle 6. Elle est arrivée sur `main` au moment du `git merge --no-ff feature/country-rule`. C'est utile parce que le rapport de la nuit tourne depuis `main` : je peux essayer ma règle sur la branche sans risquer de casser le rapport.
 
-**Q1.** Non, `main` n'avait pas la règle 6 pendant que je travaillais sur la branche. Elle est arrivée sur `main` avec la commande `git merge --no-ff feature/country-rule`. C'est utile parce que le rapport tourne depuis `main` : on teste d'abord sur la branche, sans risquer de casser le rapport.
+**Q2.** Avec une pull request, quelqu'un d'autre peut relire mon code avant la fusion, et les tests se lancent tout seuls. Un `git merge` sur mon PC ne fait ni l'un ni l'autre.
 
-**Q2.** Une pull request permet à quelqu'un de relire le code avant la fusion, et de lancer les tests automatiquement. Un `git merge` local ne fait ni l'un ni l'autre.
+**Q3.** `md5: 2b3c1607110c06fe4619ef560c7a6356.dir`. C'est l'empreinte du contenu du dossier `data/raw`. Si je change un seul caractère dans un CSV, l'empreinte devient complètement différente, et DVC sait que les données ont changé.
 
-**Q3.** `md5: 2b3c1607110c06fe4619ef560c7a6356.dir`. C'est l'empreinte du contenu du dossier `data/raw`. Si je change un seul caractère dans un CSV, l'empreinte change complètement, et DVC voit que les données ont été modifiées.
+**Q4.** C'est le fichier `data/.gitignore`. Il contient `/raw`, donc Git ne regarde plus ce dossier.
 
-**Q4.** C'est le fichier `data/.gitignore` (il contient `/raw`) qui dit à Git d'ignorer les CSV.
+**Q5.** Ils portent le nom de leur empreinte md5. Deux versions du même fichier ont donc deux noms différents et ne s'écrasent jamais.
 
-**Q5.** Les fichiers de `dvc-storage` portent le nom de leur empreinte md5. Comme ça, deux versions d'un même fichier ne s'écrasent jamais.
+**Q6.** Le fichier `raw.dvc` ne garde que l'empreinte des données. Quand les données changent, seule l'empreinte change, donc deux lignes suffisent. Mais il faut quand même commiter, sinon cette version des données n'est liée à aucun commit et je ne pourrai pas la retrouver.
 
-**Q6.** Le fichier `raw.dvc` ne contient que l'empreinte, donc quand les données changent, seules deux lignes changent. Il faut quand même commiter, sinon cette version n'est liée à aucun commit et on ne pourra pas la retrouver.
+**Q7.** Non, le code n'a pas bougé, seules les données ont changé. Le total est passé de 7655.90 (data-v1) à 8835.40 (data-v2).
 
-**Q7.** Non, le code n'a pas changé, seulement les données. Le total est passé de 7655.90 (data-v1) à 8835.40 (data-v2).
+**Q8.** `git checkout data-v1 -- data/raw.dvc` a seulement remis l'ancien petit fichier pointeur. `dvc checkout` a ensuite remis les vrais CSV de la v1 dans `data/raw`.
 
-**Q8.** `git checkout data-v1 -- data/raw.dvc` a remplacé seulement le petit fichier pointeur par celui de la v1. `dvc checkout` a ensuite remis les vrais CSV de la v1 dans `data/raw`.
+**Q9.** Le pointeur dit v1, mais les fichiers sur le disque sont encore ceux de la v2. Je l'ai testé : le pipeline donne toujours 8835.40. C'est dangereux parce qu'il n'y a aucune erreur, et on peut donner un mauvais chiffre en croyant avoir l'ancien.
 
-**Q9.** Si on oublie `dvc checkout`, le pointeur dit « v1 » mais les fichiers sont encore ceux de la v2. J'ai testé : le pipeline affiche toujours 8835.40. C'est dangereux car il n'y a pas d'erreur, et on peut donner un mauvais chiffre en pensant avoir l'ancien.
+**Q10.** `git clone` lui a donné le code, l'historique et les fichiers pointeurs, mais pas les CSV. `dvc pull` lui a donné les vrais CSV, pris dans le remote.
 
-**Q10.** `git clone` a donné au collègue le code, l'historique et les fichiers pointeurs, mais pas les CSV. `dvc pull` a téléchargé les vrais CSV depuis le remote.
-
-**Q11.** Si j'avais oublié `dvc push`, le collègue aurait le pointeur de la v2 mais pas les données. `dvc pull` ne trouverait pas les fichiers, donc il n'aurait pas le total 8835.40.
+**Q11.** Il aurait le pointeur de la v2, mais les fichiers ne seraient pas dans le remote. `dvc pull` ne les trouverait pas, donc il n'aurait pas les nouvelles données et ne pourrait pas obtenir 8835.40.
 
 ### Historique Git
 
@@ -91,54 +87,52 @@
 * 2e059d5 Empty project with requirements
 ```
 
----
-
 ## TP3
 
-**Q1.** Si on laisse DuckDB deviner, il choisit un type en regardant les valeurs. Le jour où une quantité vaut `deux`, soit le chargement plante, soit DuckDB passe toute la colonne en texte sans prévenir, et la ligne fautive est perdue ou mal lue. En chargeant tout en `VARCHAR`, le chargement ne plante jamais et la ligne arrive telle quelle. C'est la couche staging qui choisit les types (avec `try_cast`), et les règles de qualité qui rejettent la ligne avec un motif clair.
+**Q1.** Si DuckDB devine les types et qu'un jour une quantité vaut `deux`, soit le chargement plante, soit la colonne change de type sans prévenir. En chargeant tout en texte, le chargement passe toujours et la ligne arrive telle quelle. Ensuite c'est le staging qui met les bons types, et les règles qui rejettent la ligne avec un motif.
 
-**Q2.** Le total naïf vaut 13950.6 en SQL comme en Python. Le langage ne rend pas un pipeline fiable. Ce qui le rend fiable, ce sont les contrôles : les règles de qualité, les tests et l'arrêt de la chaîne quand quelque chose ne va pas.
+**Q2.** Le total naïf vaut 13950.6 en SQL, comme avec l'ancien script Python. Donc ce n'est pas le langage qui rend un pipeline fiable. Ce sont les contrôles : les règles, les tests, et l'arrêt quand quelque chose ne va pas.
 
-**Q3.** Le brut est toujours dans `raw.orders`, intact. Si une règle est fausse, on corrige le fichier SQL et on relance `dbt build` : toutes les tables sont recalculées à partir du brut, sans retourner chercher le fichier source. En ETL, la donnée d'origine aurait déjà été transformée avant d'arriver dans l'entrepôt.
+**Q3.** Le brut reste intact dans `raw.orders`. Si une règle est fausse, je corrige le SQL et je relance `dbt build`, et tout est recalculé depuis le brut. Je n'ai pas besoin de retourner chercher le fichier d'origine.
 
-**Q4.** On remplacerait `type: duckdb` et `path` par `type: snowflake` (ou `bigquery`), avec le compte, l'utilisateur, la base, le schéma et le warehouse. Le mot de passe ne doit jamais être écrit dans le fichier ni commité dans Git. On le lit depuis une variable d'environnement avec `password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"`, et dans la CI on le met dans un secret (GitHub Actions secrets). On peut aussi garder `profiles.yml` hors du dépôt, dans `~/.dbt/`.
+**Q4.** Il faudrait mettre `type: snowflake` (ou `bigquery`) à la place de `duckdb`, avec le compte, l'utilisateur, la base et le schéma. Le mot de passe ne doit pas être écrit dans le fichier ni partir sur Git. On le met dans une variable d'environnement, lue avec `{{ env_var('SNOWFLAKE_PASSWORD') }}`, et dans la CI on le garde dans un secret GitHub.
 
-**Q5.** Le staging ne fait que typer et réparer, il ne décide pas ce qui est valide. Si on supprimait la ligne 1013 ici, elle disparaîtrait sans motif et n'arriverait jamais dans la quarantaine `orders_rejected`. En la gardant, la couche intermediate peut la rejeter avec le motif `invalid_date`, et on sait ce qui a été écarté et pourquoi.
+**Q5.** Le staging sert juste à mettre les bons types, il ne décide pas ce qui est bon ou mauvais. Si je supprimais la 1013 ici, elle disparaîtrait sans explication. En la gardant, elle arrive dans `orders_rejected` avec le motif `invalid_date`, et on sait pourquoi elle a été écartée.
 
-**Q6.** Une vue ne stocke pas de données : c'est une requête enregistrée. À chaque lecture, DuckDB relance le `select` sur `raw.orders`. C'est acceptable ici car le staging est simple et rapide, il n'est lu que par le modèle suivant, et il est toujours à jour avec le dernier brut chargé. On n'a pas besoin de stocker une copie du brut juste avec d'autres types.
+**Q6.** Une vue ne garde pas de données, c'est juste une requête enregistrée. Chaque fois qu'on la lit, DuckDB relance la requête sur `raw.orders`. Pour le staging ça va très bien : la requête est simple et rapide, et la vue est toujours à jour avec le dernier fichier chargé.
 
-**Q7.** dbt a remplacé `{{ ref('stg_orders') }}` par le nom complet de la relation : `"warehouse"."main"."stg_orders"` (base `warehouse`, schéma `main`, vue `stg_orders`).
+**Q7.** Par `"warehouse"."main"."stg_orders"`, le vrai nom de la vue dans l'entrepôt.
 
-**Q8.** `row_number() over (partition by order_id order by _row_number)` découpe les lignes en groupes de même `order_id`, puis numérote les lignes de chaque groupe dans l'ordre du fichier : 1, 2, 3… La première ligne d'un `order_id` a le numéro 1, les suivantes ont 2 ou plus, donc `> 1` marque les doublons, comme `keep="first"`. On a besoin de `_row_number` car une table SQL n'a pas d'ordre : sans lui, « la première ligne » n'a pas de sens et le résultat pourrait changer d'une exécution à l'autre. Pandas, lui, garde l'ordre du fichier dans l'index.
+**Q8.** Elle regroupe les lignes qui ont le même `order_id`, puis les numérote dans l'ordre du fichier. La première ligne prend 1, les suivantes 2, 3, etc. Donc tout ce qui est plus grand que 1 est un doublon, comme avec `keep="first"`. Il faut `_row_number` parce qu'une table SQL n'a pas d'ordre. Sans lui, on ne sait pas laquelle est la première ligne.
 
-**Q9.** Il crée un fichier `models/marts/revenue_by_product.sql` (un `select product, round(sum(quantity * unit_price), 2) as revenue from {{ ref('orders_clean') }} group by product`) et ajoute ses tests dans `models/marts/marts.yml`. Il ne touche à aucun fichier Python : dbt trouve seul sa place dans le graphe grâce au `ref()`.
+**Q9.** Il crée `models/marts/revenue_by_product.sql`, avec un `select` qui fait la somme par produit à partir de `{{ ref('orders_clean') }}`, et il ajoute ses tests dans `models/marts/marts.yml`. Il ne touche à aucun fichier Python.
 
-**Q10.** Pendant l'étape 5 (sans test unitaire), c'est `unique_orders_clean_order_id` qui a échoué (FAIL 1) : la commande 1010 apparaissait deux fois dans `orders_clean`. Ensuite `revenue_by_country` et son test `unique_revenue_by_country_country` sont passés en SKIP (`PASS=9 ERROR=1 SKIP=2`). C'est ce qu'on veut : le rapport du directeur n'a pas été reconstruit avec le doublon, il garde le dernier bon chiffre. Après avoir ajouté les tests unitaires, j'ai refait l'essai : cette fois c'est le test unitaire `test_duplicate_order_keeps_the_first` qui échoue en premier, et `int_orders_checked` et tout ce qui suit sont en SKIP (`PASS=1 ERROR=1 SKIP=12`). L'erreur est arrêtée encore plus tôt, avant même de lire les vraies données.
+**Q10.** Quand j'ai fait l'essai à l'étape 5, c'est `unique_orders_clean_order_id` qui a échoué, parce que la commande 1010 était deux fois dans `orders_clean`. Ensuite `revenue_by_country` et son test sont passés en SKIP. C'est ce qu'on veut : le rapport du directeur n'est pas refait avec un doublon, il garde le bon chiffre. J'ai refait l'essai après avoir ajouté les tests unitaires. Cette fois c'est `test_duplicate_order_keeps_the_first` qui échoue en premier, et tout ce qui vient après est en SKIP.
 
 **Q11.**
 
 | Contrôle du TP1 (Python) | Son équivalent dbt |
 |---|---|
-| `check_schema` | La création de la vue `stg_orders` : si une colonne manque, elle échoue (`Binder Error`) ; plus les tests `not_null` / `accepted_values` sur les colonnes |
-| Les règles 1 à 6 dans `clean_orders` | Le `case when` de `int_orders_checked.sql`, colonne `reject_reason` |
-| `check_reject_rate` | Le test singulier `assert_reject_rate_below_20_percent.sql` |
+| `check_schema` | La vue `stg_orders` ne se crée pas s'il manque une colonne, plus les tests `not_null` et `accepted_values` |
+| Les règles 1 à 6 dans `clean_orders` | Le `case when` dans `int_orders_checked.sql` |
+| `check_reject_rate` | Le test `assert_reject_rate_below_20_percent.sql` |
 | `rejected_orders.csv` | La table `orders_rejected` |
-| `PIPELINE STOPPED`, rien n'est publié | `dbt build` : un test qui échoue met tous les modèles suivants en SKIP, code de sortie 1 |
+| `PIPELINE STOPPED`, rien n'est publié | `dbt build` met en SKIP tout ce qui suit un test raté, et sort avec le code 1 |
 
-**Q12.** Les données venaient du fichier YAML lui-même : les lignes écrites à la main dans `given`. dbt remplace `ref('stg_orders')` par ces lignes, sans lire l'entrepôt. C'est important pour la CI : le test n'a besoin ni des CSV (qui sont sous DVC, donc pas dans le dépôt Git), ni d'un entrepôt rempli. Il est rapide, donne toujours le même résultat, et teste la logique SQL, pas les données du jour.
+**Q12.** Elles venaient du fichier YAML : ce sont les lignes que j'ai écrites dans `given`. dbt les utilise à la place de `stg_orders`. Pour la CI c'est important, parce que les CSV sont sous DVC et ne sont pas sur GitHub. Le test marche quand même, il est rapide et donne toujours le même résultat.
 
-**Q13.** Tous les descendants de la source `raw.orders` sont touchés : `stg_orders`, `int_orders_checked`, `orders_clean`, `orders_rejected`, `revenue_by_country`, avec tous leurs tests. Avec le graphe, la réponse prend quelques secondes (`source:raw.orders+`). Sans graphe, dans 200 scripts SQL, il faudrait chercher à la main quels fichiers lisent quelles tables, puis recommencer pour chaque table trouvée : des heures, avec un vrai risque d'en oublier.
+**Q13.** Tout ce qui vient après la source est touché : `stg_orders`, `int_orders_checked`, `orders_clean`, `orders_rejected` et `revenue_by_country`, avec leurs tests. Avec le graphe, je le vois en quelques secondes. Avec 200 scripts SQL et pas de graphe, il faudrait ouvrir les fichiers un par un pour voir qui lit quoi. Ça prendrait des heures, et j'en oublierais sûrement.
 
 **Q14.**
 
 | | Pipeline Python (TP1) | Pipeline dbt (TP3) |
 |---|---|---|
-| Jour 2 : quel contrôle arrête la chaîne ? | `check_reject_rate` : `PIPELINE STOPPED: Reject rate 100% is above the limit of 20% (6 of 6 rows)` | Le test `assert_reject_rate_below_20_percent` (FAIL 1), puis les marts et leurs tests en SKIP |
-| Jour 3 : quel message d'erreur ? | `PIPELINE STOPPED: Missing columns: ['unit_price']` | `ERROR creating sql view model main.stg_orders` : `Binder Error: Table "src" does not have a column named "unit_price"`, `Candidate bindings: "price"`, puis 13 étapes en SKIP |
-| Le rapport de la veille est-il conservé ? | Oui, `revenue_by_country.csv` n'est pas réécrit | Oui, la table `revenue_by_country` n'est pas reconstruite : toujours 8835.40 |
+| Jour 2 : quel contrôle arrête la chaîne ? | `check_reject_rate` (100 % de rejets, 6 lignes sur 6) | Le test `assert_reject_rate_below_20_percent` |
+| Jour 3 : quel message d'erreur ? | `PIPELINE STOPPED: Missing columns: ['unit_price']` | `Table "src" does not have a column named "unit_price"`, `Candidate bindings: "price"` |
+| Le rapport de la veille est-il conservé ? | Oui | Oui, toujours 8835.40 |
 | Code de sortie | 1 | 1 |
 
-**Q15.** Oui, c'est un problème. La quarantaine doit dire « voici ce qui a été rejeté aujourd'hui », mais au jour 2 elle montre les rejets du jour 1. On ne voit pas les 6 lignes du jour 2 (prix en centimes), alors que ce sont justement celles qu'il faut analyser. Le pipeline Python, lui, écrivait `rejected_orders.csv` avant de contrôler le taux. Solution : faire tourner le test du taux de rejet après `orders_rejected`, en l'écrivant sur `{{ ref('orders_rejected') }}` (nombre de rejets) et `{{ ref('stg_orders') }}` (nombre total). dbt construit alors d'abord la quarantaine, puis lance le test, et seuls `orders_clean` et `revenue_by_country` sont bloqués. On peut aussi lancer `dbt build --select orders_rejected` avant le `dbt build` complet, ou rendre `orders_rejected` incrémental pour garder l'historique des rejets de chaque jour (grâce à `_source_file` et `_loaded_at`).
+**Q15.** Oui, c'est gênant. La quarantaine montre encore les rejets du jour 1, alors que ce sont les 6 lignes du jour 2 qu'il faudrait regarder. Le pipeline Python, lui, écrivait les rejets avant de vérifier le taux. Pour faire pareil avec dbt, on peut écrire le test du taux de rejet à partir de `orders_rejected`. Comme ça, dbt construit d'abord la quarantaine, puis lance le test, et seul le rapport est bloqué.
 
 ### Dernière ligne de `dbt build` (jour 1)
 
