@@ -136,6 +136,5 @@
 
 ### Dernière ligne de `dbt build` (jour 1)
 
-```
 Done. PASS=14 WARN=0 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=14
-```
+
