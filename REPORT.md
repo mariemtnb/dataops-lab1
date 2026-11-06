@@ -1,4 +1,4 @@
-# Comptes rendus – TP1 et TP2
+# Comptes rendus – TP1, TP2 et TP3
 
 **Nom :** Mariem Tanabene
 
@@ -89,4 +89,59 @@
 * 9bc147a (origin/main) Add pipeline, data checks and unit tests
 * c2a23a8 Add pipeline, data checks and unit tests
 * 2e059d5 Empty project with requirements
+```
+
+---
+
+## TP3
+
+**Q1.** Si on laisse DuckDB deviner, il choisit un type en regardant les valeurs. Le jour où une quantité vaut `deux`, soit le chargement plante, soit DuckDB passe toute la colonne en texte sans prévenir, et la ligne fautive est perdue ou mal lue. En chargeant tout en `VARCHAR`, le chargement ne plante jamais et la ligne arrive telle quelle. C'est la couche staging qui choisit les types (avec `try_cast`), et les règles de qualité qui rejettent la ligne avec un motif clair.
+
+**Q2.** Le total naïf vaut 13950.6 en SQL comme en Python. Le langage ne rend pas un pipeline fiable. Ce qui le rend fiable, ce sont les contrôles : les règles de qualité, les tests et l'arrêt de la chaîne quand quelque chose ne va pas.
+
+**Q3.** Le brut est toujours dans `raw.orders`, intact. Si une règle est fausse, on corrige le fichier SQL et on relance `dbt build` : toutes les tables sont recalculées à partir du brut, sans retourner chercher le fichier source. En ETL, la donnée d'origine aurait déjà été transformée avant d'arriver dans l'entrepôt.
+
+**Q4.** On remplacerait `type: duckdb` et `path` par `type: snowflake` (ou `bigquery`), avec le compte, l'utilisateur, la base, le schéma et le warehouse. Le mot de passe ne doit jamais être écrit dans le fichier ni commité dans Git. On le lit depuis une variable d'environnement avec `password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"`, et dans la CI on le met dans un secret (GitHub Actions secrets). On peut aussi garder `profiles.yml` hors du dépôt, dans `~/.dbt/`.
+
+**Q5.** Le staging ne fait que typer et réparer, il ne décide pas ce qui est valide. Si on supprimait la ligne 1013 ici, elle disparaîtrait sans motif et n'arriverait jamais dans la quarantaine `orders_rejected`. En la gardant, la couche intermediate peut la rejeter avec le motif `invalid_date`, et on sait ce qui a été écarté et pourquoi.
+
+**Q6.** Une vue ne stocke pas de données : c'est une requête enregistrée. À chaque lecture, DuckDB relance le `select` sur `raw.orders`. C'est acceptable ici car le staging est simple et rapide, il n'est lu que par le modèle suivant, et il est toujours à jour avec le dernier brut chargé. On n'a pas besoin de stocker une copie du brut juste avec d'autres types.
+
+**Q7.** dbt a remplacé `{{ ref('stg_orders') }}` par le nom complet de la relation : `"warehouse"."main"."stg_orders"` (base `warehouse`, schéma `main`, vue `stg_orders`).
+
+**Q8.** `row_number() over (partition by order_id order by _row_number)` découpe les lignes en groupes de même `order_id`, puis numérote les lignes de chaque groupe dans l'ordre du fichier : 1, 2, 3… La première ligne d'un `order_id` a le numéro 1, les suivantes ont 2 ou plus, donc `> 1` marque les doublons, comme `keep="first"`. On a besoin de `_row_number` car une table SQL n'a pas d'ordre : sans lui, « la première ligne » n'a pas de sens et le résultat pourrait changer d'une exécution à l'autre. Pandas, lui, garde l'ordre du fichier dans l'index.
+
+**Q9.** Il crée un fichier `models/marts/revenue_by_product.sql` (un `select product, round(sum(quantity * unit_price), 2) as revenue from {{ ref('orders_clean') }} group by product`) et ajoute ses tests dans `models/marts/marts.yml`. Il ne touche à aucun fichier Python : dbt trouve seul sa place dans le graphe grâce au `ref()`.
+
+**Q10.** Pendant l'étape 5 (sans test unitaire), c'est `unique_orders_clean_order_id` qui a échoué (FAIL 1) : la commande 1010 apparaissait deux fois dans `orders_clean`. Ensuite `revenue_by_country` et son test `unique_revenue_by_country_country` sont passés en SKIP (`PASS=9 ERROR=1 SKIP=2`). C'est ce qu'on veut : le rapport du directeur n'a pas été reconstruit avec le doublon, il garde le dernier bon chiffre. Après avoir ajouté les tests unitaires, j'ai refait l'essai : cette fois c'est le test unitaire `test_duplicate_order_keeps_the_first` qui échoue en premier, et `int_orders_checked` et tout ce qui suit sont en SKIP (`PASS=1 ERROR=1 SKIP=12`). L'erreur est arrêtée encore plus tôt, avant même de lire les vraies données.
+
+**Q11.**
+
+| Contrôle du TP1 (Python) | Son équivalent dbt |
+|---|---|
+| `check_schema` | La création de la vue `stg_orders` : si une colonne manque, elle échoue (`Binder Error`) ; plus les tests `not_null` / `accepted_values` sur les colonnes |
+| Les règles 1 à 6 dans `clean_orders` | Le `case when` de `int_orders_checked.sql`, colonne `reject_reason` |
+| `check_reject_rate` | Le test singulier `assert_reject_rate_below_20_percent.sql` |
+| `rejected_orders.csv` | La table `orders_rejected` |
+| `PIPELINE STOPPED`, rien n'est publié | `dbt build` : un test qui échoue met tous les modèles suivants en SKIP, code de sortie 1 |
+
+**Q12.** Les données venaient du fichier YAML lui-même : les lignes écrites à la main dans `given`. dbt remplace `ref('stg_orders')` par ces lignes, sans lire l'entrepôt. C'est important pour la CI : le test n'a besoin ni des CSV (qui sont sous DVC, donc pas dans le dépôt Git), ni d'un entrepôt rempli. Il est rapide, donne toujours le même résultat, et teste la logique SQL, pas les données du jour.
+
+**Q13.** Tous les descendants de la source `raw.orders` sont touchés : `stg_orders`, `int_orders_checked`, `orders_clean`, `orders_rejected`, `revenue_by_country`, avec tous leurs tests. Avec le graphe, la réponse prend quelques secondes (`source:raw.orders+`). Sans graphe, dans 200 scripts SQL, il faudrait chercher à la main quels fichiers lisent quelles tables, puis recommencer pour chaque table trouvée : des heures, avec un vrai risque d'en oublier.
+
+**Q14.**
+
+| | Pipeline Python (TP1) | Pipeline dbt (TP3) |
+|---|---|---|
+| Jour 2 : quel contrôle arrête la chaîne ? | `check_reject_rate` : `PIPELINE STOPPED: Reject rate 100% is above the limit of 20% (6 of 6 rows)` | Le test `assert_reject_rate_below_20_percent` (FAIL 1), puis les marts et leurs tests en SKIP |
+| Jour 3 : quel message d'erreur ? | `PIPELINE STOPPED: Missing columns: ['unit_price']` | `ERROR creating sql view model main.stg_orders` : `Binder Error: Table "src" does not have a column named "unit_price"`, `Candidate bindings: "price"`, puis 13 étapes en SKIP |
+| Le rapport de la veille est-il conservé ? | Oui, `revenue_by_country.csv` n'est pas réécrit | Oui, la table `revenue_by_country` n'est pas reconstruite : toujours 8835.40 |
+| Code de sortie | 1 | 1 |
+
+**Q15.** Oui, c'est un problème. La quarantaine doit dire « voici ce qui a été rejeté aujourd'hui », mais au jour 2 elle montre les rejets du jour 1. On ne voit pas les 6 lignes du jour 2 (prix en centimes), alors que ce sont justement celles qu'il faut analyser. Le pipeline Python, lui, écrivait `rejected_orders.csv` avant de contrôler le taux. Solution : faire tourner le test du taux de rejet après `orders_rejected`, en l'écrivant sur `{{ ref('orders_rejected') }}` (nombre de rejets) et `{{ ref('stg_orders') }}` (nombre total). dbt construit alors d'abord la quarantaine, puis lance le test, et seuls `orders_clean` et `revenue_by_country` sont bloqués. On peut aussi lancer `dbt build --select orders_rejected` avant le `dbt build` complet, ou rendre `orders_rejected` incrémental pour garder l'historique des rejets de chaque jour (grâce à `_source_file` et `_loaded_at`).
+
+### Dernière ligne de `dbt build` (jour 1)
+
+```
+Done. PASS=14 WARN=0 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=14
 ```
