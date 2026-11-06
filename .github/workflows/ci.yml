@@ -13,5 +13,12 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Code tests
         run: python -m pytest
-      - name: Run the pipeline on day 1
-        run: python run_pipeline.py data/raw/orders_day1.csv
+      # The real CSVs are tracked by DVC and stored on a local remote,
+      # so they are not available here. The dbt unit tests bring their
+      # own rows; they only need an empty raw.orders table to exist.
+      - name: Create an empty warehouse
+        run: |
+          python load_raw.py tests/fixtures/orders_header_only.csv
+          dbt run --select stg_orders
+      - name: dbt unit tests
+        run: dbt test --select "test_type:unit"
